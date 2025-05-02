@@ -1,0 +1,3 @@
+# Ignorer les fichiers CSV générés
+data/*.csv
+
