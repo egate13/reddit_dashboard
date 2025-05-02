@@ -1,3 +1,5 @@
 # Ignorer les fichiers CSV générés
 data/*.csv
+# Ignorer le dossier virtuel
+venv/
 
