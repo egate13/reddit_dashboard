@@ -8,7 +8,7 @@ import glob
 from dash.dependencies import Input, Output
 from datetime import datetime # Needed for filename parsing
 
-DATA_DIR = "/home/wmfs0449/reddit_dashboard/data"
+DATA_DIR = "/app/data"
 
 def find_latest_csv(directory):
     """Finds the most recent CSV file in the specified directory based on filename date."""

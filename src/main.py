@@ -29,5 +29,5 @@ def health_check():
 if __name__ == "__main__":
     # Important: Use 0.0.0.0 to make the server accessible externally
     # Use a standard port like 8050 for Dash apps
-    server.run(host="0.0.0.0", port=8050, debug=False) # Set debug=False for production/testing
+    server.run(host="0.0.0.0", port=8080, debug=False) # Set debug=False for production/testing
 
