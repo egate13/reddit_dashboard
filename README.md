@@ -1,5 +1,4 @@
 
-```markdown
 # Reddit Dashboard
 
 Ce projet propose un tableau de bord interactif pour visualiser les tendances du subreddit **r/popular** sur Reddit.  
@@ -119,4 +118,3 @@ Le dashboard sera accessible à l’adresse [http://localhost:8050](http://local
 ## Exemples de fichiers générés
 
 - `data/reddit_trends_20240516.csv` : Exemple de fichier de données collectées.
-```
