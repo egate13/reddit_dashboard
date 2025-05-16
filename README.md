@@ -1,76 +1,122 @@
+
 ```markdown
-# Tableau de bord des tendances Reddit
+# Reddit Dashboard
 
-Ce projet consiste à créer un tableau de bord interactif pour visualiser les tendances des publications Reddit, en se concentrant sur le subreddit r/popular. Il récupère les meilleures publications, les analyse et présente les informations à l'aide de graphiques et de tableaux interactifs.
+Ce projet propose un tableau de bord interactif pour visualiser les tendances du subreddit **r/popular** sur Reddit.  
+Il comprend un scraper pour collecter les données via l’API Reddit, ainsi qu’une interface web (Dash/Flask) pour explorer et analyser ces tendances.
 
-## Fonctionnalités
+---
 
-* Récupère les 100 meilleures publications du subreddit r/popular.
-* Enregistre les données récupérées dans un fichier CSV avec un horodatage.
-* Visualise les tendances à l'aide de graphiques interactifs :
-    * Top 20 des publications par score.
-    * Top 20 des subreddits les plus fréquents dans le flux r/popular.
-* Affiche les données brutes dans un tableau interactif avec des options de tri, de filtrage et de pagination.
-* Mise à jour automatique du tableau de bord avec les données les plus récentes.
+## Fonctionnalités principales
+
+- **Scraping Reddit** : Récupère les posts les plus populaires de r/popular (ou tout autre subreddit défini).
+- **Stockage des données** : Les données sont sauvegardées sous forme de fichiers CSV datés dans un dossier `data/`.
+- **Dashboard interactif** :
+  - Visualisation des top posts par score.
+  - Statistiques sur les subreddits les plus fréquents.
+  - Tableau filtrable et triable de toutes les données collectées.
+- **Interface web** : Application Dash servie via Flask, accessible sur le port 8050.
+
+---
+
+## Structure du projet
+
+```
+src/
+├── dashboard.py         # Code principal du dashboard Dash + callbacks
+├── main.py              # Point d'entrée Flask, lance le serveur web
+├── scrape_reddit.py     # Scraper Reddit, exporte les données CSV
+├── requirements.txt     # Dépendances Python
+├── __pycache__/         # Fichiers compilés Python (auto-générés)
+├── venv/                # Environnement virtuel (optionnel, à ne pas versionner)
+```
+
+---
 
 ## Installation
 
-1. Clonez le référentiel :
+### Cloner le dépôt
 
 ```bash
-git clone https://github.com/votre_nom_utilisateur/reddit_dashboard.git
+git clone https://github.com/egate13/reddit_dashboard.git
+cd reddit_dashboard/src
 ```
 
-2. Créez un environnement virtuel :
+### Créer un environnement virtuel (optionnel mais recommandé)
 
 ```bash
 python3 -m venv venv
 source venv/bin/activate
 ```
 
-3. Installez les dépendances :
+### Installer les dépendances
 
 ```bash
 pip install -r requirements.txt
 ```
 
-4. Configurez les informations d'identification de l'API Reddit :
+### Configurer les accès Reddit
 
-* Créez une application de script sur Reddit : [https://www.reddit.com/prefs/apps](https://www.reddit.com/prefs/apps)
-* Remplacez les espaces réservés `CLIENT_ID`, `CLIENT_SECRET` et `USER_AGENT` dans `scrape_reddit_trends.py` par vos informations d'identification.
+Éditez `scrape_reddit.py` et remplacez les valeurs de `CLIENT_ID`, `CLIENT_SECRET` et `USER_AGENT` avec vos propres identifiants Reddit ([voir ici](https://www.reddit.com/prefs/apps)).
 
-5. Exécutez le script de récupération :
+---
+
+## Utilisation
+
+### 1. Scraper les données Reddit
+
+Lancez le script de scraping pour générer un fichier CSV :
 
 ```bash
-python scrape_reddit_trends.py
+python scrape_reddit.py
 ```
 
-6. Exécutez l'application de tableau de bord :
+Le fichier sera créé dans le dossier `data/` avec un nom du type `reddit_trends_YYYYMMDD.csv`.
+
+### 2. Lancer le dashboard
+
+Démarrez le serveur Flask/Dash :
 
 ```bash
 python main.py
 ```
 
-7. Accédez au tableau de bord dans votre navigateur Web à l'adresse : `http://0.0.0.0:8050/`
+Le dashboard sera accessible à l’adresse [http://localhost:8050](http://localhost:8050)
 
+### 3. Explorer le dashboard
 
-## Utilisation
+- **Top Posts by Score** : Diagramme des 20 posts les plus populaires.
+- **Most Frequent Subreddits** : Classement des subreddits les plus présents dans le flux.
+- **Raw Data** : Tableau interactif avec filtres, tris et recherche.
 
-Le tableau de bord est mis à jour automatiquement avec les données les plus récentes. Vous pouvez interagir avec les graphiques et le tableau pour explorer les tendances.
+---
 
-## Améliorations futures
+## Personnalisation
 
-* Intégration de la base de données pour le stockage et la récupération des données.
-* Options de personnalisation plus avancées pour le tableau de bord.
-* Prise en charge de subreddits supplémentaires.
-* Analyse des sentiments et du traitement du langage naturel.
+- Pour changer le subreddit scrappé, modifiez la variable `SUBREDDIT_NAME` dans `scrape_reddit.py`.
+- Pour changer le nombre de posts collectés, ajustez la variable `POST_LIMIT`.
 
+---
 
-## Contribution
+## Dépendances
 
-Les contributions sont les bienvenues ! N'hésitez pas à ouvrir des problèmes ou à soumettre des demandes d'extraction.
+- dash
+- plotly
+- pandas
+- praw
 
-## Licence
+(voir `requirements.txt`)
 
-Ce projet est sous licence MIT.
+---
+
+## Notes
+
+- Le répertoire `venv/` et `__pycache__/` ne doivent pas être versionnés (ajouter à `.gitignore`).
+- Les identifiants Reddit sont obligatoires pour le scraping.
+
+---
+
+## Exemples de fichiers générés
+
+- `data/reddit_trends_20240516.csv` : Exemple de fichier de données collectées.
 ```
