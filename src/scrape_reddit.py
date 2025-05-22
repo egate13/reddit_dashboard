@@ -1,3 +1,5 @@
+# /home/ubuntu/reddit_dashboard/src/scrape_reddit.py
+
 #!/home/ubuntu/reddit_dashboard/venv/bin/python
 # -*- coding: utf-8 -*-
 
@@ -32,21 +34,21 @@ def upload_to_supabase(file_path):
     try:
         # Initialiser le client Supabase
         supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-        
+
         # Nom du fichier dans le bucket
         file_name = os.path.basename(file_path)
-        
+
         # Ouvrir et lire le fichier
         with open(file_path, 'rb') as f:
             file_content = f.read()
-        
+
         # Upload vers Supabase Storage
         response = supabase.storage.from_(BUCKET_NAME).upload(
-            path=file_name, 
+            path=file_name,
             file=file_content,
             file_options={"content-type": "text/csv"}
         )
-        
+
         print(f"File successfully uploaded to Supabase bucket '{BUCKET_NAME}'")
         return True
     except Exception as e:
@@ -75,7 +77,7 @@ def scrape_reddit_trends():
         for post in subreddit.hot(limit=POST_LIMIT):
             # Correction pour l'erreur UTC - utilisation de timezone.utc
             created_time = datetime.fromtimestamp(post.created_utc, tz=timezone.utc).isoformat()
-            
+
             posts_data.append({
                 "id": post.id,
                 "title": post.title,
@@ -111,7 +113,7 @@ def scrape_reddit_trends():
     try:
         df.to_csv(OUTPUT_FILE, index=False, encoding='utf-8')
         print(f"Data saved successfully to {OUTPUT_FILE}")
-        
+
         # Upload to Supabase
         upload_to_supabase(OUTPUT_FILE)
     except Exception as e:
@@ -126,3 +128,4 @@ if __name__ == "__main__":
         print("Script will not run with placeholder credentials.\n")
     else:
         scrape_reddit_trends()
+
