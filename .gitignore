@@ -1,5 +1,7 @@
 # Ignorer les fichiers CSV générés
-data/*.csv
+data/
 # Ignorer le dossier virtuel
 venv/
+#Ignorer le pycache
+__pycache__/
 
