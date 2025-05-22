@@ -1,6 +1,3 @@
-/home/wmfs0449/reddit_dashboard/src/dashboard.py:524: FutureWarning:
-
-'H' is deprecated and will be removed in a future version, please use 'h' instead.
 #!/home/ubuntu/reddit_dashboard/venv/bin/python
 # -*- coding: utf-8 -*-
 
