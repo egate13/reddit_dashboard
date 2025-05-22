@@ -126,4 +126,3 @@ if __name__ == "__main__":
         print("Script will not run with placeholder credentials.\n")
     else:
         scrape_reddit_trends()
-

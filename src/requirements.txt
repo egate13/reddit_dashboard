@@ -3,3 +3,4 @@ plotly
 pandas
 praw
 supabase
+vaderSentiment
