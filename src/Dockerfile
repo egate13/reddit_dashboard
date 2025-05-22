@@ -1,18 +1,18 @@
-# Utilise une image Python officielle
-FROM python:3.10-slim
+# Utilisez une image de base Python
+FROM python:3.9-slim
 
-# Définit le répertoire de travail
+# Définir le répertoire de travail
 WORKDIR /app
 
-# Copie les fichiers du projet
-COPY . .
+# Copier les fichiers de l'application
+COPY . /app
 
-# Installe les dépendances
-RUN pip install --no-cache-dir -r requirements.txt
+# Installer les dépendances
+RUN pip install --no-cache-dir -r src/requirements.txt
 
-# Expose le port utilisé par Dash/Flask
+# Exposer le port sur lequel l'application s'exécute
 EXPOSE 8050
 
-# Commande pour lancer l'application
-CMD ["python", "main.py"]
+# Commande pour démarrer l'application
+CMD ["python", "src/main.py"]
 
