@@ -4,4 +4,3 @@ pandas
 praw
 supabase
 vaderSentiment
-TextBlog
