@@ -1,138 +1,161 @@
-# Reddit Dashboard
+# Reddit Trends Dashboard
 
-Ce projet propose un tableau de bord interactif pour visualiser les tendances du subreddit **r/popular** sur Reddit. Il comprend un scraper pour collecter les données via l’API Reddit, ainsi qu’une interface web (Dash/Flask) pour explorer et analyser ces tendances.
+## Vue d'ensemble
 
----
+Le Reddit Trends Dashboard est une application web interactive conçue pour analyser et visualiser les tendances, discussions et sentiments sur Reddit. Cet outil permet aux utilisateurs d'explorer les données Reddit à travers diverses visualisations et analyses, offrant des insights pour la veille concurrentielle, l'analyse de marché, et la compréhension des comportements utilisateurs.
+
+![Dashboard Preview](dashboard_preview.png)
 
 ## Fonctionnalités principales
 
-- **Scraping Reddit** : Récupère les posts les plus populaires de r/popular (ou tout autre subreddit défini).
-- **Stockage des données** : Les données sont sauvegardées dans un bucket Supabase.
-- **Dashboard interactif** :
-  - Visualisation des top posts par score.
-  - Statistiques sur les subreddits les plus fréquents.
-  - Tableau filtrable et triable de toutes les données collectées.
-- **Interface web** : Application Dash servie via Flask, accessible sur le port 8050.
+### 1. Analyse temporelle
+- Visualisation des posts dans le temps
+- Filtrage par période
 
----
+### 2. Filtrage par subreddit
+- Sélection multiple
+- Top subreddits
 
-## Structure du projet
+### 3. Analyse de sentiment
+- Distribution du sentiment
+- Sentiment par subreddit
+- Évolution du sentiment
 
+### 4. Analyse par mots-clés
+- Recherche de mots-clés
+- Tendance des mots-clés
+- Tableau de posts
+
+### 5. Analyse contextuelle
+- Extraction de contexte
+- Analyse fine
+
+### 6. Analyse prédictive
+- Modèle de prédiction
+- Prédiction de score
+
+### 7. Détection de sujets tendance
+- Identification automatique
+- Mise en évidence
+
+### 8. Segmentation d'audience
+- Profils d'utilisateurs
+- Analyse des auteurs
+
+### 9. Analyse concurrentielle
+- Suivi des concurrents
+- Comparaison
+
+### 10. KPIs et métriques
+- Posts totaux
+- Score moyen
+- Commentaires moyens
+
+## Architecture technique
+
+Le projet est structuré en modules Python :
+
+### Structure des fichiers
 ```
-src/
-├── dashboard.py         # Code principal du dashboard Dash + callbacks
-├── main.py              # Point d'entrée Flask, lance le serveur web
-├── scrape_reddit.py     # Scraper Reddit, exporte les données CSV
-├── requirements.txt     # Dépendances Python
-├── __pycache__/         # Fichiers compilés Python (auto-générés)
-├── venv/                # Environnement virtuel (optionnel, à ne pas versionner)
+reddit_dashboard/
+├── src/
+│   ├── main.py
+│   ├── dashboard.py
+│   ├── data_processing.py
+│   ├── sentiment_analysis.py
+│   ├── trend_detection.py
+│   ├── audience_segmentation.py
+│   ├── competitive_analysis.py
+│   ├── contextual_analysis.py
+│   └── predictive_analysis.py
+├── data/
+│   └── reddit_data/
+├── requirements.txt
+└── README.md
 ```
 
----
+### Technologies utilisées
+- Dash & Plotly
+- Pandas
+- NLTK & VADER
+- Scikit-learn
 
-## Installation
+## Installation et démarrage
 
-### Cloner le dépôt
+### Prérequis
+- Python 3.8+
+- pip
 
+### Installation
+1. Clonez le dépôt :
 ```bash
-git clone https://github.com/egate13/reddit_dashboard.git
-cd reddit_dashboard/src
+git clone https://github.com/votre-username/reddit-dashboard.git
+cd reddit-dashboard
 ```
-
-### Créer un environnement virtuel (optionnel mais recommandé)
-
-```bash
-python3 -m venv venv
-source venv/bin/activate
-```
-
-### Installer les dépendances
-
+2. Installez les dépendances :
 ```bash
 pip install -r requirements.txt
 ```
-
-### Configurer les accès Reddit
-
-Éditez `scrape_reddit.py` et remplacez les valeurs de `CLIENT_ID`, `CLIENT_SECRET` et `USER_AGENT` avec vos propres identifiants Reddit ([voir ici](https://www.reddit.com/prefs/apps)).
-
-### Configurer Supabase
-
-Assurez-vous d'avoir un compte Supabase et configurez les variables `SUPABASE_URL` et `SUPABASE_KEY` dans `scrape_reddit.py` et `dashboard.py` avec vos informations de connexion Supabase.
-
----
-
-## Utilisation
-
-### 1. Scraper les données Reddit
-
-Lancez le script de scraping pour générer un fichier CSV et l'uploader vers Supabase :
-
-```bash
-python scrape_reddit.py
+3. Téléchargez les ressources NLTK :
+```python
+import nltk
+nltk.download('vader_lexicon')
 ```
 
-### 2. Lancer le dashboard
-
-Démarrez le serveur Flask/Dash :
-
+### Démarrage
 ```bash
-python main.py
+python src/main.py
 ```
+L'application sera accessible à [http://127.0.0.1:8050/](http://127.0.0.1:8050/)
 
-Le dashboard sera accessible à l’adresse [http://localhost:8050](http://localhost:8050)
+## Guide d'utilisation
 
-### 3. Explorer le dashboard
+### Contrôles
+- Sélection de période
+- Filtrage par subreddit
+- Rafraîchir les données
 
-- **Top Posts by Score** : Diagramme des 20 posts les plus populaires.
-- **Most Frequent Subreddits** : Classement des subreddits les plus présents dans le flux.
-- **Raw Data** : Tableau interactif avec filtres, tris et recherche.
+### Analyse par mots-clés
+1. Entrez des mots-clés séparés par des virgules
+2. Résultats dans "Tendance des Mots-clés Généraux"
+3. Tableau "Posts contenant..."
+4. Analyse contextuelle
 
----
+### Analyse concurrentielle
+1. Entrez des noms de marques ou concurrents
+2. Résultats dans "Analyse des Mentions..."
 
-## Personnalisation
+### Visualisations
+- Activité des Posts
+- Distribution du Sentiment
+- Score vs. Commentaires
+- Prédictions
 
-- Pour changer le subreddit scrappé, modifiez la variable `SUBREDDIT_NAME` dans `scrape_reddit.py`.
-- Pour changer le nombre de posts collectés, ajustez la variable `POST_LIMIT`.
+## Personnalisation et extension
 
----
+### Nouvelles sources
+Modifiez `data_processing.py`
 
-## Dépendances
+### Nouvelles visualisations
+Ajoutez dans `dashboard.py` et créez des callbacks
 
-- dash
-- plotly
-- pandas
-- praw
-- supabase
+### Modèles prédictifs
+Modifiez `predictive_analysis.py`
 
-(voir `requirements.txt`)
+## Dépannage
 
----
+- Modules manquants : `pip install scikit-learn`
+- Données absentes : Vérifiez `data/reddit_data/`
+- Graphiques vides : Vérifiez la période sélectionnée
 
-## Notes
+## Contribution
 
-- Le répertoire `venv/` et `__pycache__/` ne doivent pas être versionnés (ajouter à `.gitignore`).
-- Les identifiants Reddit et Supabase sont obligatoires pour le scraping et l'accès aux données.
-
----
-
-## Exemples de fichiers générés
-
-- `data/reddit_trends_20240516.csv` : Exemple de fichier de données collectées.
-
----
-
-## Contributions
-
-Les contributions sont les bienvenues ! Veuillez ouvrir une issue ou une pull request pour discuter des améliorations ou des corrections.
-
----
+Fork, branche, commit, push, pull request.
 
 ## Licence
 
-Ce projet est sous licence MIT. Voir le fichier `LICENSE` pour plus de détails.
-```
+MIT — voir `LICENSE`
 
-### Conclusion
+## Contact
 
-Ce `README.md` mis à jour reflète les modifications apportées à votre projet, notamment l'utilisation de Supabase pour le stockage des données et l'intégration des scripts de scraping et de dashboard. Assurez-vous de personnaliser les sections de configuration et d'utilisation en fonction de vos besoins spécifiques.
+Ouvrez une issue ou contactez l'équipe sur GitHub.
