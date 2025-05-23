@@ -5,6 +5,7 @@ import os
 from datetime import datetime, timedelta
 from supabase import create_client
 import io
+from src.sentiment_analysis import add_sentiment_analysis
 
 DATA_DIR = "/home/wmfs0449/reddit_dashboard/data"
 
@@ -202,6 +203,8 @@ def load_data(time_period='day'):
 
             if not combined_df.empty: # Check if df is empty after filtering
                 combined_df = combined_df.drop(columns=['file_date_dt'])
+                # Ajouter l'analyse de sentiment
+                combined_df = add_sentiment_analysis(combined_df)
             else: # if empty after filtering, return empty df with original columns
                 empty_df_cols = list(combined_df.columns)
                 empty_df_cols.remove('file_date_dt') # remove temporary column
@@ -217,6 +220,8 @@ def load_data(time_period='day'):
         try:
             df = pd.read_csv(io.BytesIO(file_data))
             df = _clean_dataframe(df, latest_filename_supabase) # Cleaned here
+            # Ajouter l'analyse de sentiment
+            df = add_sentiment_analysis(df)
             print(f"Successfully loaded data from Supabase: {latest_filename_supabase}")
             return df, f"Supabase: {latest_filename_supabase}"
         except Exception as e:
@@ -227,6 +232,8 @@ def load_data(time_period='day'):
         try:
             df = pd.read_csv(latest_csv_local)
             df = _clean_dataframe(df, latest_csv_local) # Cleaned here
+            # Ajouter l'analyse de sentiment
+            df = add_sentiment_analysis(df)
             print(f"Successfully loaded data from local file: {latest_csv_local}")
             return df, f"Local: {os.path.basename(latest_csv_local)}"
         except Exception as e:
