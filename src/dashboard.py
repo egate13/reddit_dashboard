@@ -1,5 +1,3 @@
-# /home/wmfs0449/reddit_dashboard/src/dashboard.py
-
 import sys
 import os
 
@@ -12,17 +10,13 @@ from dash.dependencies import Input, Output, State
 import plotly.express as px
 import plotly.graph_objects as go
 import pandas as pd
-# import io # Commenté car io n'est plus explicitement utilisé ici, géré dans data_processing
-import re # For keyword searching
+import re
 from src.data_processing import load_data
 from src.trend_detection import detect_trending_topics
 from src.audience_segmentation import segment_audience
-from src.competitive_analysis import analyze_competitive_mentions # Import pour l'analyse concurrentielle
-
-# Supabase configuration (peut être centralisée si utilisée par d'autres modules de manière identique)
-# SUPABASE_URL = "https://mcvnrkoogobezgjcsivw.supabase.co"
-# SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1jdm5ya29vZ29iZXpnamNzaXZ3Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0NzgzMjIyNCwiZXhwIjoyMDYzNDA4MjI0fQ.D-uJysR1NPx1gZNdHPiNdjgFlZ1lLTJB_dJ2exopD_E"
-# BUCKET_NAME = "redditdashboard"
+from src.competitive_analysis import analyze_competitive_mentions
+from src.contextual_analysis import extract_context  # Importer la fonction d'analyse contextuelle
+from src.predictive_analysis import train_predictive_model, predict_future_trends  # Importer les fonctions d'analyse prédictive
 
 # Couleurs pour les graphiques
 COLORS = {
@@ -228,7 +222,7 @@ def create_dashboard(flask_server):
                     ])
                 ])
             ]),
-            
+
             # --- Row for Competitive Analysis ---
             html.Div(className='row', id='competitive-analysis-row', style={'display': 'none'}, children=[
                 html.Div(className='col-md-12', children=[
@@ -284,6 +278,33 @@ def create_dashboard(flask_server):
                         )
                     ])
                 ])
+            ]),
+
+            # --- Row for Contextual Analysis ---
+            html.Div(className='row', id='contextual-analysis-row', style={'display': 'none'}, children=[
+                html.Div(className='col-md-12', children=[
+                    html.Div(className='card', children=[
+                        html.H5("Analyse Contextuelle des Mots-clés", className="card-header"),
+                        dash_table.DataTable(
+                            id='contextual-analysis-table', page_size=5,
+                            style_header={'backgroundColor': COLORS['secondary'], 'color': 'white', 'fontWeight': 'bold'},
+                            style_cell={'textAlign': 'left', 'padding': '8px', 'minWidth': '120px', 'width': '180px', 'maxWidth': '250px',
+                                        'whiteSpace': 'normal', 'height': 'auto', 'fontFamily': 'Roboto, sans-serif', 'fontSize':'0.85rem'},
+                            style_data={'border': '1px solid #eee'}, filter_action="native", sort_action="native", sort_mode="multi",
+                            style_table={'overflowX': 'auto'},
+                        )
+                    ])
+                ])
+            ]),
+
+            # --- Row for Predictive Analysis ---
+            html.Div(className='row', id='predictive-analysis-row', style={'display': 'none'}, children=[
+                html.Div(className='col-md-12', children=[
+                    html.Div(className='card', children=[
+                        html.H5("Analyse Prédictive des Tendances", className="card-header"),
+                        dcc.Graph(id='predictive-trends-graph', config={'displayModeBar': False})
+                    ])
+                ])
             ])
         ])
     ])
@@ -313,7 +334,7 @@ def create_dashboard(flask_server):
             df['selftext'] = ''
         elif df.empty: # Si le df est vide après chargement
             # S'assurer que les colonnes attendues par les callbacks existent même si le df est vide
-            expected_cols = ['title', 'selftext', 'subreddit', 'score', 'num_comments', 'created_utc', 'author', 'permalink', 'file_date', 
+            expected_cols = ['title', 'selftext', 'subreddit', 'score', 'num_comments', 'created_utc', 'author', 'permalink', 'file_date',
                              'sentiment_category', 'sentiment_compound'] # Ajouter d'autres colonnes essentielles si nécessaire
             for col in expected_cols:
                 if col not in df.columns:
@@ -350,7 +371,12 @@ def create_dashboard(flask_server):
          Output('audience-segmentation-table', 'columns'),
          Output('competitive-analysis-table', 'data'),
          Output('competitive-analysis-table', 'columns'),
-         Output('competitive-analysis-row', 'style')
+         Output('competitive-analysis-row', 'style'),
+         Output('contextual-analysis-table', 'data'),
+         Output('contextual-analysis-table', 'columns'),
+         Output('contextual-analysis-row', 'style'),
+         Output('predictive-trends-graph', 'figure'),
+         Output('predictive-analysis-row', 'style')
         ],
         [Input('store-reddit-data', 'data'),
          Input('subreddit-filter-dropdown', 'value'),
@@ -375,7 +401,9 @@ def create_dashboard(flask_server):
                    empty_fig, empty_table_data, base_cols_for_empty_tables, hidden_section_style, \
                    empty_fig, empty_fig, empty_fig, "Aucun sujet en croissance détecté.", \
                    empty_table_data, base_cols_for_empty_tables, \
-                   empty_table_data, base_cols_for_empty_tables, hidden_section_style
+                   empty_table_data, base_cols_for_empty_tables, hidden_section_style, \
+                   empty_table_data, base_cols_for_empty_tables, hidden_section_style, \
+                   empty_fig, hidden_section_style
 
         df = pd.DataFrame(stored_data)
         if df.empty or all(col not in df.columns for col in ['title', 'score', 'num_comments', 'created_utc']): # Vérifier les colonnes essentielles
@@ -383,14 +411,15 @@ def create_dashboard(flask_server):
                    empty_fig, empty_table_data, base_cols_for_empty_tables, hidden_section_style, \
                    empty_fig, empty_fig, empty_fig, "Données insuffisantes ou corrompues.", \
                    empty_table_data, base_cols_for_empty_tables, \
-                   empty_table_data, base_cols_for_empty_tables, hidden_section_style
+                   empty_table_data, base_cols_for_empty_tables, hidden_section_style, \
+                   empty_table_data, base_cols_for_empty_tables, hidden_section_style, \
+                   empty_fig, hidden_section_style
 
         # Assurer que les colonnes de sentiment existent, sinon les initialiser (au cas où add_sentiment_analysis n'aurait pas pu les créer)
         for sent_col in ['sentiment_category', 'sentiment_compound']:
             if sent_col not in df.columns:
                 df[sent_col] = 'N/A' if sent_col == 'sentiment_category' else 0.0
         if 'selftext' not in df.columns: df['selftext'] = ''
-
 
         # Apply subreddit filter
         filtered_df = df.copy()
@@ -406,8 +435,10 @@ def create_dashboard(flask_server):
                    empty_fig, empty_table_data, base_cols_for_empty_tables, hidden_section_style, \
                    empty_fig, empty_fig, empty_fig, "Aucun sujet en croissance pour ce filtre.", \
                    empty_table_data, base_cols_for_empty_tables, \
-                   empty_table_data, base_cols_for_empty_tables, hidden_section_style
-        
+                   empty_table_data, base_cols_for_empty_tables, hidden_section_style, \
+                   empty_table_data, base_cols_for_empty_tables, hidden_section_style, \
+                   empty_fig, hidden_section_style
+
         active_df = filtered_df # Utiliser filtered_df après le filtre (peut être égal à df si aucun filtre)
 
         # KPIs
@@ -427,7 +458,7 @@ def create_dashboard(flask_server):
                 active_df_for_time_graph['hour'] = pd.to_datetime(active_df_for_time_graph['created_utc']).dt.floor('h')
                 time_col_for_graph = 'hour'
                 posts_over_time_df = active_df_for_time_graph.groupby(time_col_for_graph).size().reset_index(name='count')
-            
+
             posts_over_time_df = posts_over_time_df.sort_values(time_col_for_graph)
             fig_posts_over_time = px.line(posts_over_time_df, x=time_col_for_graph, y='count', markers=True, title="Nombre de Posts")
             fig_posts_over_time.update_layout(plot_bgcolor=COLORS['card_background'], paper_bgcolor=COLORS['card_background'], font_color=COLORS['text'], xaxis_gridcolor=COLORS['grid'], yaxis_gridcolor=COLORS['grid'], margin=dict(t=50, b=20, l=30, r=30))
@@ -452,7 +483,7 @@ def create_dashboard(flask_server):
             fig_score_comments.update_layout(plot_bgcolor=COLORS['card_background'], paper_bgcolor=COLORS['card_background'], font_color=COLORS['text'], xaxis_gridcolor=COLORS['grid'], yaxis_gridcolor=COLORS['grid'], margin=dict(t=50, b=20, l=30, r=30))
             if 'subreddit' not in df_scatter.columns or df_scatter['subreddit'].nunique() <= 1:
                 fig_score_comments.update_traces(marker=dict(color=COLORS['secondary']))
-        
+
         # --- Main Data Table ---
         main_table_cols_to_drop = ['selftext']
         # Ajouter les colonnes temporaires créées dynamiquement pour les graphiques si elles existent
@@ -463,7 +494,6 @@ def create_dashboard(flask_server):
 
         main_table_cols_display = [{"name": i, "id": i} for i in active_df.columns if i not in main_table_cols_to_drop]
         main_table_data_display = active_df.drop(columns=main_table_cols_to_drop, errors='ignore').to_dict('records')
-
 
         # --- Keyword Analysis (General) ---
         fig_keyword_trend = empty_fig
@@ -477,7 +507,7 @@ def create_dashboard(flask_server):
                 keyword_section_style_display = {'display': 'flex'}
                 regex_keywords = [re.escape(kw) for kw in keywords]
                 pattern = r'(' + '|'.join(regex_keywords) + r')'
-                
+
                 df_keywords_found = active_df[
                     active_df['title'].str.contains(pattern, case=False, regex=True) |
                     active_df['selftext'].str.contains(pattern, case=False, regex=True)
@@ -492,7 +522,7 @@ def create_dashboard(flask_server):
                         active_df_for_kw_trend['hour_kw'] = pd.to_datetime(active_df_for_kw_trend['created_utc']).dt.floor('h')
                         time_col_kw = 'hour_kw'
                         kw_trend_df = active_df_for_kw_trend.groupby(time_col_kw).size().reset_index(name='mentions')
-                    
+
                     kw_trend_df = kw_trend_df.sort_values(time_col_kw)
                     fig_keyword_trend = px.line(kw_trend_df, x=time_col_kw, y='mentions', markers=True, title=f"Mentions pour: {', '.join(keywords)}")
                     fig_keyword_trend.update_layout(plot_bgcolor=COLORS['card_background'], paper_bgcolor=COLORS['card_background'], font_color=COLORS['text'], xaxis_gridcolor=COLORS['grid'], yaxis_gridcolor=COLORS['grid'], margin=dict(t=50, b=20, l=30, r=30))
@@ -504,7 +534,7 @@ def create_dashboard(flask_server):
                     keyword_table_data_display = df_keywords_found[keyword_table_cols_final].to_dict('records')
                 else:
                     fig_keyword_trend.update_layout(annotations=[{'text': f"Aucun post trouvé pour les mots-clés: {', '.join(keywords)}", 'xref': 'paper', 'yref': 'paper', 'showarrow': False, 'font': {'size': 16}}])
-            
+
         # --- Sentiment Analysis ---
         fig_sentiment_dist = empty_fig
         fig_sentiment_subreddit = empty_fig
@@ -532,7 +562,7 @@ def create_dashboard(flask_server):
                                                     range_color=[-1,1], # Assurer que l'échelle va de -1 à 1
                                                     title="Score de Sentiment Moyen")
                         fig_sentiment_subreddit.update_layout(plot_bgcolor=COLORS['card_background'], paper_bgcolor=COLORS['card_background'], margin=dict(t=50, b=20, l=30, r=30))
-            
+
             active_df_for_sentiment_time = active_df.copy() # Utiliser une copie pour ajouter des colonnes temporaires
             if 'file_date' in active_df_for_sentiment_time.columns and active_df_for_sentiment_time['file_date'].nunique() > 1:
                 sentiment_time_df = active_df_for_sentiment_time.groupby('file_date')['sentiment_compound'].mean().reset_index()
@@ -559,7 +589,6 @@ def create_dashboard(flask_server):
                  if len(trending_topics_list) > 15:
                     trending_topics_list_display += "..."
 
-
         # --- Audience Segmentation ---
         audience_segmentation_data_display = empty_table_data
         audience_segmentation_cols_display = base_cols_for_empty_tables
@@ -584,13 +613,61 @@ def create_dashboard(flask_server):
                     competitive_analysis_data_display = df_competitive.to_dict('records')
                 # Si df_competitive est vide, la section sera affichée mais le tableau sera vide ou avec le message par défaut.
 
+        # --- Contextual Analysis ---
+        contextual_analysis_data_display = empty_table_data
+        contextual_analysis_cols_display = base_cols_for_empty_tables
+        contextual_analysis_section_style_display = hidden_section_style
+
+        if keywords_str and total_posts > 0:
+            keywords = [kw.strip().lower() for kw in keywords_str.split(',') if kw.strip()]
+            if keywords:
+                contextual_analysis_section_style_display = {'display': 'flex'}
+                contextual_analysis_list = []
+                for index, row in active_df.iterrows():
+                    title_context = extract_context(row['title'], keywords)
+                    selftext_context = extract_context(row['selftext'], keywords)
+                    combined_context = title_context + selftext_context
+                    for context in combined_context:
+                        contextual_analysis_list.append({
+                            'post_id': row['id'],
+                            'title': row['title'],
+                            'context': context,
+                            'subreddit': row['subreddit'],
+                            'score': row['score'],
+                            'num_comments': row['num_comments'],
+                            'created_utc': row['created_utc'],
+                            'author': row['author'],
+                            'permalink': row['permalink']
+                        })
+
+                if contextual_analysis_list:
+                    contextual_analysis_df = pd.DataFrame(contextual_analysis_list)
+                    contextual_analysis_cols_display = [{"name": i, "id": i} for i in contextual_analysis_df.columns]
+                    contextual_analysis_data_display = contextual_analysis_df.to_dict('records')
+
+        # --- Predictive Analysis ---
+        predictive_trends_fig = empty_fig
+        predictive_analysis_section_style_display = hidden_section_style
+
+        if total_posts > 0:
+            predictive_analysis_section_style_display = {'display': 'flex'}
+            model = train_predictive_model(active_df)
+            new_data = pd.DataFrame({'num_comments': [10, 20, 30, 40, 50]})  # Exemple de nouvelles données
+            predictions = predict_future_trends(model, new_data)
+            predictive_trends_df = pd.DataFrame({'num_comments': new_data['num_comments'], 'predicted_score': predictions})
+            predictive_trends_fig = px.line(predictive_trends_df, x='num_comments', y='predicted_score', markers=True, title="Prédiction des Scores de Posts")
+            predictive_trends_fig.update_layout(plot_bgcolor=COLORS['card_background'], paper_bgcolor=COLORS['card_background'], font_color=COLORS['text'], xaxis_gridcolor=COLORS['grid'], yaxis_gridcolor=COLORS['grid'], margin=dict(t=50, b=20, l=30, r=30))
+            predictive_trends_fig.update_traces(line_color=COLORS['accent'])
+
         return (f"{total_posts:,}", f"{avg_score:,}", f"{avg_comments:,}",
                 fig_posts_over_time, fig_top_subreddits, fig_score_comments,
                 main_table_data_display, main_table_cols_display,
                 fig_keyword_trend, keyword_table_data_display, keyword_table_cols_display_struct, keyword_section_style_display,
                 fig_sentiment_dist, fig_sentiment_subreddit, fig_sentiment_time, trending_topics_list_display,
                 audience_segmentation_data_display, audience_segmentation_cols_display,
-                competitive_analysis_data_display, competitive_analysis_cols_display, competitive_analysis_section_style_display)
+                competitive_analysis_data_display, competitive_analysis_cols_display, competitive_analysis_section_style_display,
+                contextual_analysis_data_display, contextual_analysis_cols_display, contextual_analysis_section_style_display,
+                predictive_trends_fig, predictive_analysis_section_style_display)
 
     return app
 
@@ -602,6 +679,7 @@ if __name__ == '__main__':
     project_root = os.path.abspath(os.path.join(current_dir, '..'))
     if project_root not in sys.path:
         sys.path.insert(0, project_root)
-        
+
     app = create_dashboard(flask_server)
     app.run_server(debug=True, port=8050)
+
