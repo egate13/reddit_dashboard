@@ -1,18 +1,22 @@
 # /home/wmfs0449/reddit_dashboard/src/dashboard.py
 
+import sys
+import os
+
+# Ajouter le répertoire parent au chemin de recherche des modules
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 import dash
 from dash import dcc, html, dash_table, callback_context
+from dash.dependencies import Input, Output, State
 import plotly.express as px
 import plotly.graph_objects as go
 import pandas as pd
-import os
-import glob
-from dash.dependencies import Input, Output, State
-from datetime import datetime, timedelta
-from supabase import create_client # Removed unused Client
 import io
 import re # For keyword searching
 from src.data_processing import load_data
+from src.trend_detection import detect_trending_topics
+from src.audience_segmentation import segment_audience
 
 # Supabase configuration
 SUPABASE_URL = "https://mcvnrkoogobezgjcsivw.supabase.co"
@@ -151,6 +155,32 @@ def create_dashboard(flask_server):
                 ]),
             ]),
 
+            # --- Row for Sentiment Analysis ---
+            html.Div(className='row', children=[
+                html.Div(className='col-md-6', children=[
+                    html.Div(className='card', children=[
+                        html.H5("Distribution du Sentiment", className="card-header"),
+                        dcc.Graph(id='sentiment-distribution-graph')
+                    ])
+                ]),
+                html.Div(className='col-md-6', children=[
+                    html.Div(className='card', children=[
+                        html.H5("Sentiment par Subreddit", className="card-header"),
+                        dcc.Graph(id='sentiment-by-subreddit-graph')
+                    ])
+                ]),
+            ]),
+
+            # --- Row for Sentiment Over Time ---
+            html.Div(className='row', children=[
+                html.Div(className='col-md-12', children=[
+                    html.Div(className='card', children=[
+                        html.H5("Évolution du Sentiment", className="card-header"),
+                        dcc.Graph(id='sentiment-over-time-graph')
+                    ])
+                ]),
+            ]),
+
             # --- Row for Keyword Analysis ---
             html.Div(className='row', id='keyword-analysis-row', style={'display': 'none'}, children=[ # Hidden by default
                 html.Div(className='col-md-12', children=[
@@ -165,6 +195,35 @@ def create_dashboard(flask_server):
                         dash_table.DataTable(
                             id='keyword-posts-table',
                             page_size=5,
+                            style_header={'backgroundColor': COLORS['secondary'], 'color': 'white', 'fontWeight': 'bold'},
+                            style_cell={'textAlign': 'left', 'padding': '10px', 'minWidth': '100px', 'width': '150px', 'maxWidth': '300px',
+                                        'whiteSpace': 'normal', 'height': 'auto', 'fontFamily': 'Roboto, sans-serif'},
+                            style_data={'border': '1px solid #eee'},
+                            filter_action="native", sort_action="native", sort_mode="multi",
+                            style_table={'overflowX': 'auto'},
+                        )
+                    ])
+                ])
+            ]),
+
+            # --- Row for Trending Topics ---
+            html.Div(className='row', children=[
+                html.Div(className='col-md-12', children=[
+                    html.Div(className='card', children=[
+                        html.H5("Sujets en Croissance", className="card-header"),
+                        html.Div(id='trending-topics-display', className='trending-topics-text')
+                    ])
+                ])
+            ]),
+
+            # --- Row for Audience Segmentation ---
+            html.Div(className='row', children=[
+                html.Div(className='col-md-12', children=[
+                    html.Div(className='card', children=[
+                        html.H5("Segmentation par Audience", className="card-header"),
+                        dash_table.DataTable(
+                            id='audience-segmentation-table',
+                            page_size=10,
                             style_header={'backgroundColor': COLORS['secondary'], 'color': 'white', 'fontWeight': 'bold'},
                             style_cell={'textAlign': 'left', 'padding': '10px', 'minWidth': '100px', 'width': '150px', 'maxWidth': '300px',
                                         'whiteSpace': 'normal', 'height': 'auto', 'fontFamily': 'Roboto, sans-serif'},
@@ -243,7 +302,16 @@ def create_dashboard(flask_server):
          Output('keyword-trend-graph', 'figure'),
          Output('keyword-posts-table', 'data'),
          Output('keyword-posts-table', 'columns'),
-         Output('keyword-analysis-row', 'style')], # To show/hide the keyword section
+         Output('keyword-analysis-row', 'style'),
+         # Outputs for sentiment analysis
+         Output('sentiment-distribution-graph', 'figure'),
+         Output('sentiment-by-subreddit-graph', 'figure'),
+         Output('sentiment-over-time-graph', 'figure'),
+         # Output for trending topics
+         Output('trending-topics-display', 'children'),
+         # Output for audience segmentation
+         Output('audience-segmentation-table', 'data'),
+         Output('audience-segmentation-table', 'columns')],
         [Input('store-reddit-data', 'data'),
          Input('subreddit-filter-dropdown', 'value'),
          Input('keyword-input', 'value')] # New input for keywords
@@ -257,12 +325,12 @@ def create_dashboard(flask_server):
 
         if not stored_data:
             return kpi_default, kpi_default, kpi_default, empty_fig, empty_fig, empty_fig, empty_table_data, default_table_cols, \
-                   empty_fig, empty_table_data, default_table_cols, {'display': 'none'}
+                   empty_fig, empty_table_data, default_table_cols, {'display': 'none'}, empty_fig, empty_fig, empty_fig, "Aucun sujet en croissance", empty_table_data, default_table_cols
 
         df = pd.DataFrame(stored_data)
         if df.empty:
             return kpi_default, kpi_default, kpi_default, empty_fig, empty_fig, empty_fig, empty_table_data, default_table_cols, \
-                   empty_fig, empty_table_data, default_table_cols, {'display': 'none'}
+                   empty_fig, empty_table_data, default_table_cols, {'display': 'none'}, empty_fig, empty_fig, empty_fig, "Aucun sujet en croissance", empty_table_data, default_table_cols
 
         default_table_cols = [{"name": i, "id": i} for i in df.columns if i != 'selftext'] # Exclude selftext from main table by default
 
@@ -275,7 +343,7 @@ def create_dashboard(flask_server):
             no_filter_match_text = "Aucune donnée ne correspond au filtre de subreddit."
             empty_fig_filtered = {'data': [], 'layout': {'xaxis': {'visible': False}, 'yaxis': {'visible': False}, 'annotations': [{'text': no_filter_match_text, 'xref': 'paper', 'yref': 'paper', 'showarrow': False, 'font': {'size': 16}}]}}
             return kpi_default, kpi_default, kpi_default, empty_fig_filtered, empty_fig_filtered, empty_fig_filtered, empty_table_data, default_table_cols, \
-                   empty_fig, empty_table_data, default_table_cols, {'display': 'none'}
+                   empty_fig, empty_table_data, default_table_cols, {'display': 'none'}, empty_fig, empty_fig, empty_fig, "Aucun sujet en croissance", empty_table_data, default_table_cols
 
         # If filtered_df becomes empty due to subreddits, but there *was* data initially.
         # If no subreddits selected, or subreddits selected but df is still populated:
@@ -374,10 +442,53 @@ def create_dashboard(flask_server):
                 else: # No keywords found
                     fig_keyword_trend = {'data': [], 'layout': {'xaxis': {'visible': False}, 'yaxis': {'visible': False}, 'annotations': [{'text': f"Aucun post trouvé pour: {', '.join(keywords)}", 'xref': 'paper', 'yref': 'paper', 'showarrow': False, 'font': {'size': 16}}]}}
 
+        # --- Sentiment Analysis ---
+        # Sentiment Distribution Graph
+        sentiment_counts = active_df['sentiment_category'].value_counts().reset_index()
+        sentiment_counts.columns = ['sentiment', 'count']
+        fig_sentiment_dist = px.pie(sentiment_counts, values='count', names='sentiment',
+                                     color='sentiment',
+                                     color_discrete_map={'Positif': '#4CAF50', 'Neutre': '#FFC107', 'Négatif': '#F44336'},
+                                     title="Distribution du Sentiment")
+        fig_sentiment_dist.update_layout(plot_bgcolor=COLORS['card_background'], paper_bgcolor=COLORS['card_background'])
+
+        # Sentiment by Subreddit
+        top_subreddits_sentiment = active_df.groupby('subreddit')['sentiment_compound'].mean().nlargest(10).reset_index()
+        fig_sentiment_subreddit = px.bar(top_subreddits_sentiment, x='subreddit', y='sentiment_compound',
+                                       color='sentiment_compound',
+                                       color_continuous_scale=['#F44336', '#FFC107', '#4CAF50'],
+                                       title="Score de Sentiment Moyen par Subreddit")
+        fig_sentiment_subreddit.update_layout(plot_bgcolor=COLORS['card_background'], paper_bgcolor=COLORS['card_background'])
+
+        # Sentiment Over Time
+        if 'file_date' in active_df.columns and active_df['file_date'].nunique() > 1:
+            sentiment_time_df = active_df.groupby('file_date')['sentiment_compound'].mean().reset_index()
+            time_col = 'file_date'
+        else:
+            active_df['hour'] = pd.to_datetime(active_df['created_utc']).dt.floor('H')
+            sentiment_time_df = active_df.groupby('hour')['sentiment_compound'].mean().reset_index()
+            time_col = 'hour'
+
+        fig_sentiment_time = px.line(sentiment_time_df, x=time_col, y='sentiment_compound',
+                                      title="Évolution du Sentiment dans le Temps")
+        fig_sentiment_time.update_layout(plot_bgcolor=COLORS['card_background'], paper_bgcolor=COLORS['card_background'])
+        fig_sentiment_time.add_hline(y=0, line_dash="dash", line_color="gray")
+
+        # --- Trending Topics ---
+        trending_topics = detect_trending_topics(active_df, time_window='day')
+        trending_topics_display = ", ".join(trending_topics) if trending_topics else "Aucun sujet en croissance"
+
+        # --- Audience Segmentation ---
+        audience_segmentation_df = segment_audience(active_df)
+        audience_segmentation_cols = [{"name": i, "id": i} for i in audience_segmentation_df.columns]
+        audience_segmentation_data = audience_segmentation_df.to_dict('records')
+
         return (f"{total_posts:,}", f"{avg_score:,}", f"{avg_comments:,}",
                 fig_posts_over_time, fig_top_subreddits, fig_score_comments,
                 main_table_data, main_table_cols,
-                fig_keyword_trend, keyword_table_data, keyword_table_cols, keyword_section_style)
+                fig_keyword_trend, keyword_table_data, keyword_table_cols, keyword_section_style,
+                fig_sentiment_dist, fig_sentiment_subreddit, fig_sentiment_time, trending_topics_display,
+                audience_segmentation_data, audience_segmentation_cols)
 
     return app
 
